@@ -22,7 +22,7 @@ plt.imshow(recon, cmap='gray')
 plt.title('identification stage - reconstruct')
 
 # %% identification stage - align
-fit = ml.load_fit('model=[cnm]__train=[dcan256_tilt=60_snr=0db_sample=100000]__rep=1')
+fit = ml.load_fit('model=[cnm]__train=[dcan256_tilt=60_snr=15db_sample=100000]__rep=1')
 aff_mat = fit(recon)
 plt.imshow(recon, cmap='gray')
 marker.add_parallelograms(plt.gca(), aff_mat)
