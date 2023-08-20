@@ -17,7 +17,7 @@ class ObsMeta:
         other parameters documented below
         '''
         self.phi = phi.astype(np.int8)
-        self.phi_str = phi_str
+        self.phi_str = phi_str # name of recon NN or sensing basis
         self.pos = pos # upper left corner of the observed rectangle
         self.size = size # height and width of a single block
         self.shape = shape # number of blocks in vertical and horizontal direction
