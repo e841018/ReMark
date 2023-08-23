@@ -5,7 +5,7 @@ import ml
 # detection stage
 ################################################################################
 
-def draw_detect_specs(res, max_n_blob=4, min_dist=2):
+def draw_detection_specs(res, max_n_blob=4, min_dist=2):
     h, w = res
     min_dist_pw2 = min_dist ** 2
     n_blob = np.random.randint(1, max_n_blob + 1)
@@ -24,7 +24,7 @@ def draw_detect_specs(res, max_n_blob=4, min_dist=2):
         specs.append((y, x, intensity))
     return specs
 
-def detect_synth(res, specs, sigma=0.8):
+def synth_detection_img(res, specs, sigma=0.8):
     '''
     synthesize marker in the detection stage
     parameters:
@@ -51,8 +51,8 @@ if __name__ == '__main__':
 
     all_data = []
     while len(all_data) < n_draw:
-        specs = draw_detect_specs(res)
-        image = detect_synth(res, specs)
+        specs = draw_detection_specs(res)
+        image = synth_detection_img(res, specs)
         if image.sum() > 0.001:
             all_data.append((image, ))
 
@@ -66,7 +66,7 @@ if __name__ == '__main__':
 # identification stage
 ################################################################################
 
-def draw_content(n_draw, s=3):
+def draw_content(n_draw, s=4):
     contents = []
     for i in range(n_draw):
         contents.append(np.random.randint(0, 2, (s, s)))
@@ -99,7 +99,7 @@ def get_aff_mat(x, y, deg, edge_len, tilt_axis, tilt_shrink):
     aff_mat = ml.embed.cnm_normalize(aff_mat)
     return aff_mat
 
-def check_boundary_aff(aff_mat, res):
+def check_boundary(aff_mat, res):
     '''
     check if any of the vertices are out of boundary after transform
     parameters:
@@ -123,7 +123,7 @@ def check_boundary_aff(aff_mat, res):
         return False
     return True
 
-def draw_aff(n_draw, res, max_tilt=60):
+def draw_aff_mat(n_draw, res, max_tilt=60):
     h, w = res
     min_res = min(res)
     edge_len_min = min_res * 0.5 * 0.4
@@ -139,11 +139,11 @@ def draw_aff(n_draw, res, max_tilt=60):
         tilt_shrink = np.cos(tilt_deg / 180 * np.pi)
         for param in zip(x, y, deg, edge_len, tilt_axis, tilt_shrink):
             aff_mat = get_aff_mat(*param)
-            if check_boundary_aff(aff_mat, res):
+            if check_boundary(aff_mat, res):
                 generated.append(aff_mat)
     return generated[:n_draw]
 
-def align_synth_aff(res, content, aff_mat, sigma=0.8, bias=None):
+def synth_identification_img(res, content, aff_mat, sigma=0.8, bias=None):
     '''
     synthesize marker in the identification stage
     parameters:
@@ -183,7 +183,7 @@ def align_synth_aff(res, content, aff_mat, sigma=0.8, bias=None):
         marker *= bias
     return marker
 
-def draw_bias(n_draw, max_radius=900, intact=False):
+def draw_bias_spec(n_draw, max_radius=900, intact=False):
     slope = 0.055 / 60 # change in relative intensity per pixel
     size = 10, 10 # macropixel size
     shape = 32, 32 # scanning shape
@@ -260,15 +260,15 @@ if __name__ == '__main__':
 
     n_draw_spare = int(n_draw * 1.01)
     contents = draw_content(n_draw_spare, s=4)
-    labels = draw_aff(n_draw_spare, res, max_tilt=max_tilt)
-    bias_specs = draw_bias(n_draw_spare, max_radius=maxR)
+    labels = draw_aff_mat(n_draw_spare, res, max_tilt=max_tilt)
+    bias_specs = draw_bias_spec(n_draw_spare, max_radius=maxR)
     all_data = []
     for i in tqdm.tqdm(range(n_draw_spare)):
         bias = bias_linear(res, *bias_specs[i])
-        image = align_synth_aff(
+        image = synth_identification_img(
             res, contents[i],
             labels[i],
-            sigma=0.8, bias=bias).astype(np.float32)
+            sigma=0.8, bias=bias)
         if image.sum() > 0.001:
             all_data.append((image, labels[i], bias_specs[i]))
     assert len(all_data) >= n_draw, len(all_data)

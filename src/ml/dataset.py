@@ -10,6 +10,8 @@ def load_split_dataset(name, test_size=0.2, verbose=True):
         name: file name in dataset/
         test_size: porportion of the data used as test set, default = 0.2
         verbose: set to False to disable printing
+    returns:
+        all_data, train_data, valid_data
     '''
     # load
     with open(os.path.join('../dataset', name), 'rb') as f:
@@ -46,7 +48,6 @@ class AlignDataset(torch.utils.data.Dataset):
     def __len__(self):
         return self.len
     def __getitem__(self, index):
-        image, label, bias_spec = self.data[index]
-        image = image.astype(np.float32) # TODO: is this needed?
+        image, label, bias_spec, content = self.data[index]
         image /= np.linalg.norm(image)
         return image[np.newaxis, :, :], embed.embed(label)
