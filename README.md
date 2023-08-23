@@ -14,10 +14,19 @@ This repository provides the source code used in *ReMark: Privacy-preserving Fid
 ### Usage
 
 * Identify marker ID from observations: `demo.py`
+  * `<python> demo.py` prints details and shows reconstructed images.
+
 * Synthesize datasets: `synth.py`
   * `<python> synth.py` generates dataset files in `dataset/`, overwrites if existing.
 
-* Train reconstruction NNs: TODO
+* Train reconstruction NNs:
+  * `<python> train_recon_detection.py 0`
+    generates `model/recon/model=[dcan_M=72]__train=[clear_detection_sample=100000]__rep=0/model.pt`,
+    overwrites if existing.
+  * `<python> train_recon_identification.py 0`
+    generates `model/recon/model=[dcan_M=256]__train=[clear_identification_sample=100000]__rep=0/model.pt`,
+    overwrites if existing.
+  
 * Train alignment NNs: TODO
 
 ### Notes on SPI hardware

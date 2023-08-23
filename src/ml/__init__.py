@@ -3,8 +3,12 @@ import torch
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 from . import embed
 
+################################################################################
+# reconstruction NN
+################################################################################
+
 def load_enc_dec(model_name):
-    encoder, decoder = torch.load(f'../model/recon_model/{model_name}/model.pt', map_location=device)
+    encoder, decoder = torch.load(f'../model/recon/{model_name}/model.pt', map_location=device)
     return encoder, decoder
 
 def encoder2phi(encoder):
@@ -57,7 +61,7 @@ class Decoder():
             phi: encoder module or ndarray
                 encoder: the 0th layer's weight has shape (M, 0, H, W), entries in {-1., 1.}
                 ndarray: shape = (M, N), dtype = np.int8
-            decoder: encoder module, takes inputs of shape (B, M)
+            decoder: decoder module, takes inputs of shape (B, M)
                 and returns reconstructions of shape (B, 1, H, W)
 
         usage:
@@ -131,8 +135,12 @@ class Decoder():
 
         return reconstructions
 
+################################################################################
+# alignment NN
+################################################################################
+
 def load_fit(model_name):
-    model = torch.load(f'../model/align_model/{model_name}/model_epoch50.pt', map_location=device)
+    model = torch.load(f'../model/align/{model_name}/model_epoch50.pt', map_location=device)
     fit = Fit(model)
     return fit
 

@@ -31,7 +31,7 @@ class ObsMeta:
 
     def __str__(self):
         M, N = self.phi.shape
-        ret = '==========metadata==========\n'
+        ret = 'ObsMeta:\n'
         ret += f'{"sensing basis":>15s}: {self.phi_str}\n'
         ret += f'{"comp. ratio":>15s}: {M} / {N} = {M/N*100:5.2f}%\n'
         ret += f'{"position":>15s}: {self.pos}\n'

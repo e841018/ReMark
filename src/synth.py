@@ -123,7 +123,7 @@ def check_boundary_aff(aff_mat, res):
         return False
     return True
 
-def draw_aff(n_draw, res, max_tilt=30):
+def draw_aff(n_draw, res, max_tilt=60):
     h, w = res
     min_res = min(res)
     edge_len_min = min_res * 0.5 * 0.4
