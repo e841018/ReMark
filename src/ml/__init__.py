@@ -1,7 +1,7 @@
-import numpy as np
-import torch
-device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+import numpy as np, torch
 from . import embed
+
+device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 ################################################################################
 # reconstruction NN
@@ -140,7 +140,7 @@ class Decoder():
 ################################################################################
 
 def load_fit(model_name):
-    model = torch.load(f'../model/align/{model_name}/model_epoch50.pt', map_location=device)
+    model = torch.load(f'../model/align/{model_name}/model.pt', map_location=device)
     fit = Fit(model)
     return fit
 

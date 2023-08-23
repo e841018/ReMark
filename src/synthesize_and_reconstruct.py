@@ -39,7 +39,7 @@ for i in tqdm.tqdm(range(n_draw)):
         labels[i],
         sigma=0.8, bias=bias)
     # noisy sampling
-    obs = sample(image) # average signal strength is about 15 dB
+    obs = sample(image) # RMS of signal is about 15 dB
     obs += np.random.normal(scale=10**(nl_db/20), size=obs.shape)
     observations.append(obs)
 # reconstruction

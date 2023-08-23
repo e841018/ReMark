@@ -1,5 +1,6 @@
 # %% imports
-import pickle, matplotlib.pyplot as plt
+import pickle
+import matplotlib.pyplot as plt
 import ml, marker
 
 # The `.obs` file is a pickled dict object, containing a numpy vector of

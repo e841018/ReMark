@@ -1,4 +1,5 @@
-import numpy as np, cv2, pickle, tqdm
+import pickle
+import numpy as np, cv2, tqdm
 import ml
 
 ################################################################################

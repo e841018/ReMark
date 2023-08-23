@@ -1,6 +1,6 @@
 # %% imports
 
-import os, sys
+import sys, os
 import numpy as np, torch, torch.nn as nn, tqdm
 from ml.dataset import load_split_dataset, ReconDataset
 from ml.model_parts import GaussianNoise, Normalize, Reshape
@@ -34,7 +34,7 @@ M = int(np.floor(N*comp_ratio))
 
 # %% dataset and model name
 
-dataset_name = f'clear_detection_sample={100000}'
+dataset_name = 'clear_detection_sample=100000'
 print(f'training set: {dataset_name}')
 
 model_name = f'model=[dcan_M={M}]__train=[{dataset_name}]__rep={rep}'
@@ -152,7 +152,7 @@ def run_epoch(epoch, dataloader, is_training):
     avg_reg = reg_epoch / num_instance
     
     return avg_loss, avg_reg, num_flip
-    
+
 # %% preparation for training
 
 # mkdir

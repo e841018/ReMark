@@ -1,5 +1,4 @@
-import torch
-from torch import nn
+import torch, torch.nn as nn
 
 class Reshape(nn.Module): # nn.Unflatten in new versions does the same
     def __init__(self, *shape):

@@ -1,4 +1,5 @@
-import numpy as np, cv2, matplotlib, pickle
+import pickle
+import numpy as np, cv2, matplotlib
 
 ################################################################################
 # extract cells from image

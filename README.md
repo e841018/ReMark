@@ -31,7 +31,9 @@ This repository provides the source code used in *ReMark: Privacy-preserving Fid
   * `<python> synthesize_and_reconstruct.py`
     generates `dataset/align/dcan256_snr=15db_sample=100000.pkl`,
     overwrites if existing.
-  * TODO
+  * `<python> train_align.py 0`
+    generates `model/align/model=[cnm]__train=[dcan256_snr=15db_sample=100000]__rep=0\model.pt`,
+    overwrites if existing.
 
 
 ### Notes on SPI hardware
