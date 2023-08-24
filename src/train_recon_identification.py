@@ -77,14 +77,7 @@ def mse_loss(output, label):
 def binary_reg(weight):
     return ((weight - 1).pow(2) * (weight + 1).pow(2)).mean()
 
-# %% weight statistics
-
-def weight_max_dev(weight):
-    '''
-    parameters:
-        weight: detached tensor
-    '''
-    return torch.max(torch.min((weight - 1).abs(), (weight + 1).abs())) # in newer versions, torch.min -> torch.minimum
+# %% utility
 
 def binarize(weight):
     '''
@@ -189,9 +182,7 @@ for epoch in trange:
     stats_valid = f'valid: {loss:5.3f}'
 
     # display status
-    max_dev = weight_max_dev(encoder[0].weight.detach())
-    stats_reg = f'max_dev:{max_dev:5.3f}'
-    trange.set_postfix_str(f'{stats_train} | {stats_valid} | {stats_reg}')
+    trange.set_postfix_str(f'{stats_train} | {stats_valid}')
     
     # binarize and fix encoder after `n_epoch_before_reg + n_epoch_reg` epochs
     if epoch == n_epoch_before_reg + n_epoch_reg:
