@@ -99,7 +99,7 @@ def run_epoch(epoch, dataloader, is_training):
 
     avg_loss = loss_epoch / num_instance
     avg_errors = (errors_epoch / num_instance).cpu().numpy()
-    
+
     return (avg_loss, *avg_errors)
 
 # %% preparation for training
@@ -140,6 +140,6 @@ for epoch in trange:
 
     # display status
     trange.set_postfix_str(f'{stats_train} | {stats_valid}')
-    
+
 # save model after training
 torch.save(model, os.path.join(model_path, f'model.pt'))

@@ -3,15 +3,15 @@ import numpy as np, torch
 from . import embed
 
 def load_split_dataset(name, test_size=0.2, verbose=True):
-    '''
-    load and split a dataset
+    ''' load and split a dataset
 
-    parameters:
-        name: file name in dataset/
-        test_size: porportion of the data used as test set, default = 0.2
-        verbose: set to False to disable printing
-    returns:
-        all_data, train_data, valid_data
+    ### parameters:
+    *   `name`: file name in dataset/
+    *   `test_size`: porportion of the data used as test set, default = 0.2
+    *   `verbose`: set to False to disable printing
+
+    ### returns:
+    *   `all_data`, `train_data`, `valid_data`: list of object
     '''
     # load
     with open(os.path.join('../dataset', name), 'rb') as f:
@@ -25,7 +25,7 @@ def load_split_dataset(name, test_size=0.2, verbose=True):
         print(f'total:          {len(all_data)}')
         print(f'training set:   {len(train_data)}')
         print(f'validation set: {len(valid_data)}')
-    
+
     return all_data, train_data, valid_data
 
 class ReconDataset(torch.utils.data.Dataset):

@@ -26,16 +26,18 @@ def load_phi_decode(model_name):
 
 class Sampler():
     def __init__(self, phi):
-        '''
-        simulate DMD sampling
+        ''' simulate DMD sampling
 
-        parameters:
-            phi: encoder module or ndarray
-                encoder: the 0th layer's weight has shape (M, 0, H, W), entries in {-1., 1.}
-                ndarray: shape = (M, N), dtype = np.int8
-        usage:
+        ### parameters:
+        *   `phi`: encoder module or ndarray
+        \t  *   encoder module: the weight of the 0th layer has shape (M, 0, H, W), entries in {-1., 1.}
+        \t  *   ndarray: shape=(M, N), dtype=np.int8, entries in {-1, 1}
+
+        ### usage:
+            ```
             sample = Sampler(phi)
             observation = sample(img)
+            ```
         '''
         if isinstance(phi, torch.nn.Module):
             phi = encoder2phi(phi)
@@ -43,10 +45,11 @@ class Sampler():
 
     def __call__(self, img):
         '''
-        parameters:
-            img: ndarray, shape = (N, ) or (H, W)
-        returns:
-            observation: ndarray, shape = (M, )
+        ### parameters:
+        *   `img`: ndarray, shape= (N, ) or (H, W)
+
+        ### returns:
+        *   `observation`: ndarray, shape=(M, )
         '''
         M, N = self.phi.shape
         img = img.reshape((N, 1))
@@ -54,20 +57,20 @@ class Sampler():
 
 class Decoder():
     def __init__(self, phi, decoder):
-        '''
-        decode a single image or a list of images
+        ''' decode a single image or a list of images
 
-        parameters:
-            phi: encoder module or ndarray
-                encoder: the 0th layer's weight has shape (M, 0, H, W), entries in {-1., 1.}
-                ndarray: shape = (M, N), dtype = np.int8
-            decoder: decoder module, takes inputs of shape (B, M)
-                and returns reconstructions of shape (B, 1, H, W)
+        ### parameters:
+        *   `phi`: encoder module or ndarray
+        \t  *   encoder module: the weight of the 0th layer has shape (M, 0, H, W), entries in {-1., 1.}
+        \t  *   ndarray: shape=(M, N), dtype=np.int8, entries in {-1, 1}
+        *   `decoder`: decoder module, takes inputs of shape (B, M) and returns reconstructions of shape (B, 1, H, W)
 
-        usage:
+        ### usage:
+            ```
             decode = Decoder(decoder)
             reconstruction = decode(observation)
             reconstructions = decode.batch(observations)
+            ```
         '''
         if isinstance(phi, torch.nn.Module):
             phi = encoder2phi(phi)
@@ -76,10 +79,11 @@ class Decoder():
 
     def __call__(self, observation):
         '''
-        parameters:
-            observation: ndarray, shape = (M, )
-        returns:
-            reconstruction: ndarray, shape = (H, W), dtype = np.float32
+        ### parameters:
+        *   `observation`: ndarray, shape=(M, )
+
+        ### returns:
+        *   `reconstruction`: ndarray, shape=(H, W), dtype=np.float32
         '''
         # prepare data
         M, N = self.phi.shape
@@ -89,7 +93,7 @@ class Decoder():
         self.decoder.eval()
         with torch.no_grad():
             recon = self.decoder(observation)[0, 0, :, :].detach()
-        
+
         # set negative to 0
         recon = torch.max(recon, torch.tensor([0.], device=device))
 
@@ -103,10 +107,11 @@ class Decoder():
 
     def batch(self, observations):
         '''
-        parameters:
-            observations: list of ndarray, shape = (M, ), dtype = np.float32
-        returns:
-            reconstructions: list of ndarray, shape = (H, W), dtype = np.float32
+        ### parameters:
+        *   `observations`: list of ndarray, shape=(M, ), dtype=np.float32
+
+        ### returns:
+        *   `reconstructions`: list of ndarray, shape=(H, W), dtype=np.float32
         '''
         # prepare data
         M, N = self.phi.shape
@@ -121,14 +126,14 @@ class Decoder():
             for batch in dataloader:
                 batch = batch.to(device)
                 recons = self.decoder(batch)[:, 0, :, :].detach()
-        
+
                 # set negative to 0
                 recons = torch.max(recons, torch.tensor([0.], device=device))
 
                 # scale s.t. (Phi@recon).norm() == obs.norm()
                 scales = batch.norm(dim=1) / torch.matmul(self.phi, recons.reshape(-1, N, 1)).norm(dim=(1, 2))
                 recons *= scales.view(-1, 1, 1)
-                
+
                 # move data to cpu
                 recons = recons.cpu().numpy().astype(np.float32)
                 reconstructions += [im for im in recons]
@@ -146,26 +151,27 @@ def load_fit(model_name):
 
 class Fit():
     def __init__(self, model):
-        '''
-        fit a single image
+        ''' fit a single image
 
-        parameters:
-            model: alignment module, takes inputs of shape (B, 1, H, W)
-                and returns alignment of shape (B, 6)
+        ### parameters:
+        *   `model`: alignment module, takes inputs of shape (B, 1, H, W) and returns alignment of shape (B, 6)
 
-        usage:
+        ### usage:
+            ```
             fit = Fit(model)
             aff_mat = fit(recon)
             aff_mats = fit.batch(recons)
+            ```
         '''
         self.model = model
 
     def __call__(self, recon):
         '''
-        parameters:
-            recon: ndarray, shape = (H, W)
-        returns:
-            aff_mat: as defined in embed.cnm_embed()
+        ### parameters:
+        *   `recon`: ndarray, shape=(H, W)
+
+        ### returns:
+        *   `aff_mat`: as defined in embed.cnm_embed()
         '''
         # prepare data
         H, W = recon.shape
@@ -176,15 +182,16 @@ class Fit():
         self.model.eval()
         with torch.no_grad():
             output = self.model(recon)[0].detach().cpu().numpy().astype(np.float32)
-        
+
         return embed.extract(output)
 
     def batch(self, recons):
         '''
-        parameters:
-            recons: list of ndarray, shape = (H, W)
-        returns:
-            aff_mats: list of aff_mat, as defined in embed.cnm_embed()
+        ### parameters:
+        *   `recons`: list of ndarray, shape=(H, W)
+
+        ### returns:
+        *   `aff_mats`: list of aff_mat, as defined in embed.cnm_embed()
         '''
         # prepare data
         recons = [recon / np.linalg.norm(recon) for recon in recons]

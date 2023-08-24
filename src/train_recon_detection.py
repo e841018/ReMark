@@ -18,8 +18,11 @@ n_epoch_before_reg = 10
 n_epoch_reg = 5
 def reg_alpha(epoch):
     '''
-    parameters:
-        epoch: 1-indexed
+    ### parameters:
+    *   `epoch`: int, 1-indexed
+
+    ### returns:
+    *   `alpha`: float
     '''
     if epoch <= n_epoch_before_reg:
         return 0.
@@ -81,8 +84,11 @@ def binary_reg(weight):
 
 def binarize(weight):
     '''
-    parameters:
-        weight: detached tensor
+    ### parameters:
+    *   `weight`: detached tensor
+
+    ### returns:
+    *   `weight`: dtype=torch.float32, entries in {-1., 1.}
     '''
     return (weight > 0).type(torch.float32) * 2 - 1
 
@@ -143,7 +149,7 @@ def run_epoch(epoch, dataloader, is_training):
 
     avg_loss = loss_epoch / num_instance
     avg_reg = reg_epoch / num_instance
-    
+
     return avg_loss, avg_reg, num_flip
 
 # %% preparation for training
@@ -183,11 +189,11 @@ for epoch in trange:
 
     # display status
     trange.set_postfix_str(f'{stats_train} | {stats_valid}')
-    
+
     # binarize and fix encoder after `n_epoch_before_reg + n_epoch_reg` epochs
     if epoch == n_epoch_before_reg + n_epoch_reg:
         encoder[0].weight = torch.nn.Parameter(binarize(encoder[0].weight.detach()))
         encoder[0].weight.requires_grad = False
-    
+
 # save model after training
 torch.save((encoder, decoder), os.path.join(model_path, f'model.pt'))

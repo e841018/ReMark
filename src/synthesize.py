@@ -26,16 +26,15 @@ def draw_detection_specs(res, max_n_blob=4, min_dist=2):
     return specs
 
 def synth_detection_img(res, specs, sigma=0.8):
-    '''
-    synthesize marker in the detection stage
-    parameters:
-        res: (h, w) in macropixels
-        specs: list of (x, y, intensity)
-            x, y in macropixels
-            intensity in [0, 1]
-        sigma: sigma of Gaussian kernel
-    return:
-        type = np.float32, shape = res, values in [0, 1]
+    ''' synthesize marker in the detection stage
+
+    ### parameters:
+    *   `res`: (h, w) in macropixels
+    *   `specs`: list of (x, y, intensity), x, y in macropixels, intensity in [0, 1]
+    *   `sigma`: sigma of Gaussian kernel
+
+    ### returns:
+    *   dtype=np.float32, shape=res, values in [0, 1]
     '''
     h, w = res
     img = np.zeros(res, dtype=np.float32)
@@ -74,10 +73,10 @@ def draw_content(n_draw, s=4):
     return contents
 
 def get_aff_mat(x, y, deg, edge_len, tilt_axis, tilt_shrink):
-    '''
-    generate an affine transformation matrix from geometrical parameters
-    return:
-        aff_mat: as defined in cnm_embed(), shape=(2, 3), dtype=np.float32
+    ''' generate an affine transformation matrix from geometrical parameters
+
+    ### returns:
+    *   `aff_mat`: as defined in embed.cnm_embed(), shape=(2, 3), dtype=np.float32
     '''
     angle1 = (deg - tilt_axis) / 180 * np.pi
     angle2 = tilt_axis / 180 * np.pi
@@ -92,7 +91,7 @@ def get_aff_mat(x, y, deg, edge_len, tilt_axis, tilt_shrink):
     # bases = [[ c2, s2],  @  [[scale_keep,            0],  @  [[ c1, s1],
     #          [-s2, c2]]      [         0, scale_shrink]]      [-s1, c1]]
     bases = np.array([[ c1c2,  s1c2], [-c1s2, -s1s2]]) * scale_keep \
-            + np.array([[-s1s2,  c1s2], [-s1c2,  c1c2]]) * scale_shrink
+          + np.array([[-s1s2,  c1s2], [-s1c2,  c1c2]]) * scale_shrink
     aff_mat = np.zeros((2, 3), dtype=np.float32)
     aff_mat[:, :2] = bases
     aff_mat[0, 2] = x
@@ -101,11 +100,14 @@ def get_aff_mat(x, y, deg, edge_len, tilt_axis, tilt_shrink):
     return aff_mat
 
 def check_boundary(aff_mat, res):
-    '''
-    check if any of the vertices are out of boundary after transform
-    parameters:
-        aff_mat: as defined in cnm_embed()
-        res: (h, w)
+    ''' check if any of the vertices is out of boundary after transform
+
+    ### parameters:
+    *   `aff_mat`: as defined in embed.cnm_embed()
+    *   `res`: (h, w)
+
+    ### returns:
+    *   True if all vertices are in boundary
     '''
     h, w = res
     # marker at center
@@ -144,51 +146,10 @@ def draw_aff_mat(n_draw, res, max_tilt=60):
                 generated.append(aff_mat)
     return generated[:n_draw]
 
-def synth_identification_img(res, content, aff_mat, sigma=0.8, bias=None):
-    '''
-    synthesize marker in the identification stage
-    parameters:
-        res: (h, w)
-        content: dtype = int32, value in {0, 1}, shape = (4, 4)
-        aff_mat: dtype = float32, shape = (2, 3), from cnm_embed()
-        sigma: sigma of cv2.GaussianBlur
-        bias: type = np.float64, shape = res, max = 1.0
-    return:
-        type = np.float32, shape = res, values in [0, 1]
-    '''
-    res = np.array(res)
-    # generate marker at center
-    m_size = 12
-    marker = np.zeros(res, dtype=np.uint8)
-    min_res = min(res)
-    assert min_res >= m_size
-    marker[0:m_size,   0:m_size  ] = 1
-    marker[1:m_size-1, 1:m_size-1] = 0
-    marker[2:m_size-2, 2:m_size-2] = \
-        np.kron(content, np.ones((2, 2), dtype=np.int32))
-    marker *= 255
-    # normalize coordinates
-    l = (m_size - 1) / 2
-    M = np.array([[ 1/l,   0,  -1],
-                  [   0, 1/l,  -1],
-                  [   0,   0,   1]], dtype=np.float32)
-    # affine transformation
-    marker = cv2.warpAffine(marker, aff_mat@M, res[::-1], flags=cv2.INTER_CUBIC)
-    # Gaussian blur
-    if sigma != 0:
-        marker = cv2.GaussianBlur(marker, (5, 5), sigma)
-    # normalize values to the range [0, 1]
-    marker = (marker/255.0).astype(np.float32)
-    # bias
-    if bias is not None:
-        marker *= bias
-    return marker
-
-def draw_bias_spec(n_draw, max_radius=900, intact=False):
+def draw_bias_spec(n_draw, max_radius=1100, intact=False):
     slope = 0.055 / 60 # change in relative intensity per pixel
     size = 10, 10 # macropixel size
     shape = 32, 32 # scanning shape
-    # max_radius = 900 # [pixel]
 
     bias_specs = []
     while len(bias_specs) < n_draw:
@@ -223,12 +184,12 @@ def draw_bias_spec(n_draw, max_radius=900, intact=False):
     return bias_specs[:n_draw]
 
 def bias_linear(res, deg, val_range=(0.0, 1.0)):
-    '''
-    generate mask of linear bias
-    parameters:
-        res: (h, w)
-        deg: direction of gradient vectors. 0 deg is right, 90 deg is up.
-        val_range: (val_min, val_max), where val_min could be negative
+    ''' generate mask of linear bias
+
+    ### parameters:
+    *   `res`: (h, w)
+    *   `deg`: direction of gradient vectors. 0 deg is right, 90 deg is up.
+    *   `val_range`: (val_min, val_max), where val_min could be negative
     '''
     # grid
     h, w = res
@@ -243,14 +204,50 @@ def bias_linear(res, deg, val_range=(0.0, 1.0)):
     # scale
     bias_min, bias_max = np.min(bias), np.max(bias)
     val_min, val_max = val_range
-    assert val_min <= val_max, '''
-        Fixed bug on 2022/3/3. If this assertion failed, then the val_range
-        (may be called bias_spec elsewhere) parameter could be generated before
-        this fix.'''
     scale = (val_max-val_min) / (bias_max-bias_min)
     bias = bias * scale + (- scale * bias_min + val_min)
     bias[bias<0] = 0
     return bias
+
+def synth_identification_img(res, content, aff_mat, sigma=0.8, bias=None):
+    ''' synthesize marker in the identification stage
+
+    ### parameters:
+    *   `res`: (h, w)
+    *   `content`: dtype=int32, value in {0, 1}, shape=(4, 4)
+    *   `aff_mat`: dtype=float32, shape=(2, 3), from cnm_embed()
+    *   `sigma`: sigma of cv2.GaussianBlur
+    *   `bias`: dtype=np.float64, shape=res, max = 1.0
+
+    ### returns:
+    *   dtype=np.float32, shape=res, values in [0, 1]
+    '''
+    res = np.array(res)
+    # generate marker at center
+    m_size = 12
+    marker = np.zeros(res, dtype=np.uint8)
+    min_res = min(res)
+    assert min_res >= m_size
+    marker[0:m_size,   0:m_size  ] = 1
+    marker[1:m_size-1, 1:m_size-1] = 0
+    marker[2:m_size-2, 2:m_size-2] = np.kron(content, np.ones((2, 2), dtype=np.int32))
+    marker *= 255
+    # normalize coordinates
+    l = (m_size - 1) / 2
+    M = np.array([[ 1/l,   0,  -1],
+                  [   0, 1/l,  -1],
+                  [   0,   0,   1]], dtype=np.float32)
+    # affine transformation
+    marker = cv2.warpAffine(marker, aff_mat@M, res[::-1], flags=cv2.INTER_CUBIC)
+    # Gaussian blur
+    if sigma != 0:
+        marker = cv2.GaussianBlur(marker, (5, 5), sigma)
+    # normalize values to the range [0, 1]
+    marker = (marker/255.0).astype(np.float32)
+    # bias
+    if bias is not None:
+        marker *= bias
+    return marker
 
 if __name__ == '__main__':
 

@@ -46,23 +46,28 @@ def nm2ab(Nx, Ny, Mx, My):
     return Ax, Ay, Bx, By
 
 def cnm_embed(aff_mat):
-    ''' affine transformation matrix:
-    [[Ax, Bx, Cx],
-     [Ay, By, Cy]]
+    ''' embed an affine transformation matrix aff_mat
+        [[Ax, Bx, Cx],
+         [Ay, By, Cy]]
+
+    into [Cx, Cy, Nx, Ny, Mx, My]
+
     The transformation is from the marker coordinates:
-        origin at center of the marker
-        basis vectors ending at the centers of 2 adjacent edges
-        (center of white rims, not outer borders)
+    *   origin at center of the marker
+    *   basis vectors ending at the centers of 2 adjacent edges (center of white rims, not outer borders)
+
     to the image coordinates:
-        origin at the center of the upper-left pixel
-        basis vectors are rightward and downward, lengths are 1 px
+    *   origin at the center of the upper-left pixel
+    *   basis vectors are rightward and downward, lengths are 1 px
     '''
     (Ax, Bx, Cx), (Ay, By, Cy) = aff_mat * cnm_scale
     Nx, Ny, Mx, My = ab2nm(Ax, Ay, Bx, By)
     return np.array([Cx, Cy, Nx, Ny, Mx, My], dtype=np.float32)
 
 def cnm_extract(CNM):
-    ''' The extracted affine transform is guaranteed to be not flipping (mirroring)
+    ''' extract aff_mat from [Cx, Cy, Nx, Ny, Mx, My]
+
+    The extracted aff_mat is guaranteed to be not flipping (mirroring).
     '''
     Cx, Cy, Nx, Ny, Mx, My = CNM
     Ax, Ay, Bx, By = nm2ab(Nx, Ny, Mx, My)
@@ -77,7 +82,7 @@ def cnm_extract(CNM):
     return aff_mat
 
 def cnm_normalize(aff_mat):
-    '''equivalent to cnm_extract(cnm_embed(aff_mat))
+    ''' equivalent to cnm_extract(cnm_embed(aff_mat))
     '''
     ((Ax, Bx, Cx), (Ay, By, Cy)) = aff_mat
 

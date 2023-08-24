@@ -6,18 +6,18 @@ import numpy as np, cv2, matplotlib
 ################################################################################
 
 def extract_cells(recon, aff_mat, alpha=0.15, return_extracted_Z=False):
-    '''
-    extract cell contents
-    parameters:
-        recon: shape=(32, 32), dtype=np.float32
-        aff_mat: as defined in cnm_embed()
-        alpha: float >= 0, coeffecient for deconvolution
-        return_extracted_Z: return the cells before polarization and estimated
-            bias
-    return:
-        cells: shape=(4, 4), dtype=np.float32
-        extracted: shape=(4, 4), dtype=np.float32
-        Z: shape=(4, 4), dtype=np.float32
+    ''' extract cell contents
+
+    ### parameters:
+    *   `recon`: shape=(32, 32), dtype=np.float32
+    *   `aff_mat`: as defined in embed.cnm_embed()
+    *   `alpha`: float >= 0, coeffecient for deconvolution
+    *   `return_extracted_Z`: return the cells before polarization and estimated bias
+
+    ### returns:
+    *   `cells`: shape=(4, 4), dtype=np.float32
+    *   `extracted`: shape=(4, 4), dtype=np.float32
+    *   `Z`: shape=(4, 4), dtype=np.float32
     '''
     # dimensions
     gran = 4 # granularity, number of times to divide a pixel
@@ -38,7 +38,7 @@ def extract_cells(recon, aff_mat, alpha=0.15, return_extracted_Z=False):
     patch = empty_patch.copy() + 255
     patch[1:-1, 1:-1] = 0
     patches.append(patch)
-    
+
     # affine transform the patches
     l = (L - 1) / 2
     M = aff_mat @ np.array([[1/l,   0, -1],
@@ -106,13 +106,14 @@ tf_rotate = matplotlib.transforms.Affine2D().rotate_deg(-135)
 
 def poly_parallelogram(aff_mat, t, b, l, r, color, tf=None, **kwargs):
     '''
-    parameters:
-        aff_mat: see `add_parallelograms()`
-        t, b, l, r in [-1, 1], relative to the center lines of white rims
-        color: matplotlib.patches.Polygon(..., edgecolor=color)
-        tf: None or matplotlib.transforms.Affine2D
-        kwargs: passed to matplotlib.patches.Polygon()
-    return:
+    ### parameters:
+    *   `aff_mat`: see `add_parallelograms()`
+    *   `t`, `b`, `l`, `r`: in [-1, 1], relative to the center lines of white rims
+    *   `color`: matplotlib.patches.Polygon(..., edgecolor=color)
+    *   `tf`: None or matplotlib.transforms.Affine2D
+    *   `kwargs`: passed to matplotlib.patches.Polygon()
+
+    ### returns:
         matplotlib.patches.Polygon
     '''
     square = np.array([[t, t, b, b],
@@ -126,13 +127,13 @@ def poly_parallelogram(aff_mat, t, b, l, r, color, tf=None, **kwargs):
         parallelogram, closed=True, facecolor='none', edgecolor=color, **kwargs)
 
 def add_parallelograms(ax, aff_mat, tf=False, no_upper_left=False, **kwargs):
-    '''
-    add parallelograms in ax
-    parameters:
-        ax: pyplot axis
-        aff_mat: as defined in cnm_embed()
-        tf: if True transforms with tf_rotate
-        kwargs: passed to matplotlib.patches.Polygon()
+    ''' add parallelograms in ax
+
+    ### parameters:
+    *   `ax`: pyplot axis
+    *   `aff_mat`: as defined in embed.cnm_embed()
+    *   `tf`: if True transforms with tf_rotate
+    *   `kwargs`: passed to matplotlib.patches.Polygon()
     '''
     tf = tf_rotate if tf else None
     ax.add_patch(poly_parallelogram(aff_mat, -1, 1, -1, 1, 'red', tf, **kwargs))
