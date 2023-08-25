@@ -2,12 +2,12 @@ import os, pickle
 import numpy as np, torch
 from . import embed
 
-def load_split_dataset(name, test_size=0.2, verbose=True):
+def load_split_dataset(name, train_prop=0.8, verbose=True):
     ''' load and split a dataset
 
     ### parameters:
     *   `name`: file name in dataset/
-    *   `test_size`: porportion of the data used as test set, default = 0.2
+    *   `train_prop`: proportion of data used as training set
     *   `verbose`: set to False to disable printing
 
     ### returns:
@@ -18,9 +18,9 @@ def load_split_dataset(name, test_size=0.2, verbose=True):
         all_data = pickle.load(f)
 
     # split
-    test_len = int(np.floor(len(all_data) * test_size))
-    train_data = all_data[:-test_len]
-    valid_data = all_data[-test_len:]
+    n_train = int(len(all_data) * train_prop)
+    train_data = all_data[:n_train]
+    valid_data = all_data[n_train:]
     if verbose:
         print(f'total:          {len(all_data)}')
         print(f'training set:   {len(train_data)}')
@@ -48,6 +48,6 @@ class AlignDataset(torch.utils.data.Dataset):
     def __len__(self):
         return self.len
     def __getitem__(self, index):
-        image, label, bias_spec, content = self.data[index]
+        image, aff_mat, bias_spec, content = self.data[index]
         image /= np.linalg.norm(image)
-        return image[np.newaxis, :, :], embed.embed(label)
+        return image[np.newaxis, :, :], embed.embed(aff_mat)

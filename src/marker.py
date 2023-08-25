@@ -12,7 +12,7 @@ def extract_cells(recon, aff_mat, alpha=0.15, return_extracted_Z=False):
     *   `recon`: shape=(32, 32), dtype=np.float32
     *   `aff_mat`: as defined in embed.cnm_embed()
     *   `alpha`: float >= 0, coeffecient for deconvolution
-    *   `return_extracted_Z`: return the cells before polarization and estimated bias
+    *   `return_extracted_Z`: also return (1) the cells before polarizing and (2) estimated bias
 
     ### returns:
     *   `cells`: shape=(4, 4), dtype=np.float32
@@ -20,7 +20,7 @@ def extract_cells(recon, aff_mat, alpha=0.15, return_extracted_Z=False):
     *   `Z`: shape=(4, 4), dtype=np.float32
     '''
     # dimensions
-    gran = 4 # granularity, number of times to divide a pixel
+    gran = 4 # granularity, number of times to subdivide a macropixel
     L = 12 # side length of a patch
     H, W = 32, 32
 
@@ -28,26 +28,28 @@ def extract_cells(recon, aff_mat, alpha=0.15, return_extracted_Z=False):
     recon = np.kron(recon, np.ones((gran, gran), dtype=recon.dtype))
 
     # generate a patch for each cell and the rim
-    empty_patch = np.zeros((L, L), dtype=np.uint8)
     patches = []
     for i in range(4):
         for j in range(4):
-            patch = empty_patch.copy()
+            patch = np.zeros((L, L), dtype=np.uint8)
             patch[2+i*2: 4+i*2, 2+j*2: 4+j*2] = 255
             patches.append(patch)
-    patch = empty_patch.copy() + 255
+    patch = np.zeros((L, L), dtype=np.uint8) + 255
     patch[1:-1, 1:-1] = 0
     patches.append(patch)
 
     # affine transform the patches
+    # normalize coordinates to [-1, 1]
     l = (L - 1) / 2
-    M = aff_mat @ np.array([[1/l,   0, -1],
-                            [  0, 1/l, -1],
-                            [  0,    0, 1]])
+    M = np.array([[ 1/l,   0,  -1],
+                  [   0, 1/l,  -1],
+                  [   0,   0,   1]], dtype=np.float32)
+    # affine transform
+    M = aff_mat @ M
     # shift by [0.5, 0.5], enlarge by gran, and shift by [-0.5, -0.5]
     if gran != 1:
         M *= gran
-        M [:, 2] += (gran - 1) / 2
+        M[:, 2] += (gran - 1) / 2
     dsize = (W * gran, H * gran)
     binary_imgs = []
     for patch in patches:
@@ -85,9 +87,10 @@ def extract_cells(recon, aff_mat, alpha=0.15, return_extracted_Z=False):
     recon -= alpha * accu
     recon[recon < 0] = 0
 
-    # polarize recon: bright cells still white, dark cells become negative
-    # polarize(recon) = recon - abs(recon - Z), where Z is the estimated bias
-    # the reason is because the following two are equivalent:
+    # We define an operation `polarize` here.
+    # cells = polarize(recon) = recon - abs(recon - Z), where Z is the estimated bias.
+    # Its effect is making bright cells remain positive, and making dark cells negative.
+    # The reason is because the following two are equivalent:
     # 1. minimize_{dict_cells} sum(abs(recon_cells - Z*dict_cells))
     # 2. maximize_{dict_cells} sum(polarize(recon_cells) * dict_cells)
     # The second one is more efficient, especially when dictionary size is large
@@ -102,15 +105,12 @@ def extract_cells(recon, aff_mat, alpha=0.15, return_extracted_Z=False):
 # annotate parallelogram
 ################################################################################
 
-tf_rotate = matplotlib.transforms.Affine2D().rotate_deg(-135)
-
-def poly_parallelogram(aff_mat, t, b, l, r, color, tf=None, **kwargs):
+def poly_parallelogram(aff_mat, t, b, l, r, color, **kwargs):
     '''
     ### parameters:
-    *   `aff_mat`: see `add_parallelograms()`
-    *   `t`, `b`, `l`, `r`: in [-1, 1], relative to the center lines of white rims
+    *   `aff_mat`: as defined in embed.cnm_embed()
+    *   `t`, `b`, `l`, `r`: in [-1, 1], marker coordinates
     *   `color`: matplotlib.patches.Polygon(..., edgecolor=color)
-    *   `tf`: None or matplotlib.transforms.Affine2D
     *   `kwargs`: passed to matplotlib.patches.Polygon()
 
     ### returns:
@@ -121,42 +121,36 @@ def poly_parallelogram(aff_mat, t, b, l, r, color, tf=None, **kwargs):
                        [1, 1, 1, 1]])
     parallelogram = (aff_mat @ square).T
 
-    if tf is not None:
-        parallelogram = tf.transform(parallelogram)
-    return matplotlib.patches.Polygon(
-        parallelogram, closed=True, facecolor='none', edgecolor=color, **kwargs)
+    return matplotlib.patches.Polygon(parallelogram, closed=True, facecolor='none', edgecolor=color, **kwargs)
 
-def add_parallelograms(ax, aff_mat, tf=False, no_upper_left=False, **kwargs):
-    ''' add parallelograms in ax
+def add_parallelograms(ax, aff_mat, upper_left=True, **kwargs):
+    ''' add parallelograms in `ax`
 
     ### parameters:
     *   `ax`: pyplot axis
     *   `aff_mat`: as defined in embed.cnm_embed()
-    *   `tf`: if True transforms with tf_rotate
+    *   `upper_left`: if True (default), plot a yellow square at the upper left corner (in marker coordinates)
     *   `kwargs`: passed to matplotlib.patches.Polygon()
     '''
-    tf = tf_rotate if tf else None
-    ax.add_patch(poly_parallelogram(aff_mat, -1, 1, -1, 1, 'red', tf, **kwargs))
+    ax.add_patch(poly_parallelogram(aff_mat, -1, 1, -1, 1, 'red', **kwargs))
     sub_space = 1/11
     sub_size = 4/11 - sub_space
     sub_shift = 4/11
     for i in [-1.5, -0.5, 0.5, 1.5]:
-        t, b = np.array([-0.5, 0.5]) * sub_size + i*sub_shift
+        t, b = np.array([-0.5, 0.5]) * sub_size + i * sub_shift
         for j in [-1.5, -0.5, 0.5, 1.5]:
-            l, r = np.array([-0.5, 0.5]) * sub_size + j*sub_shift
-            ax.add_patch(poly_parallelogram(
-                aff_mat, t, b, l, r, 'cyan', tf, **kwargs))
+            l, r = np.array([-0.5, 0.5]) * sub_size + j * sub_shift
+            ax.add_patch(poly_parallelogram(aff_mat, t, b, l, r, 'cyan', **kwargs))
     # annotate the upper left square
-    if not no_upper_left:
-        ax.add_patch(poly_parallelogram(
-            aff_mat, -8/11, -4/11, -8/11, -4/11, 'yellow', tf, **kwargs))
+    if upper_left:
+        ax.add_patch(poly_parallelogram(aff_mat, -8/11, -4/11, -8/11, -4/11, 'yellow', **kwargs))
 
 ################################################################################
 # identify
 ################################################################################
 
 with open('../data/markers_aruco_DICT_4X4_1000.pkl', 'rb') as f:
-    markers_aruco = np.array(pickle.load(f)).reshape(-1, 16)
+    markers = np.array(pickle.load(f)).reshape(-1, 16)
 
 def augment(img):
     return img, \
@@ -165,10 +159,10 @@ def augment(img):
         np.rot90(img, k=3)
 
 def identify_polarized(observed_cells, dict_size=1000):
-    corr_max = -float('inf') # default value
+    corr_max = -float('inf')
     for cells in augment(observed_cells):
-        cells = cells.reshape(-1)
-        corrs = np.dot(markers_aruco[:dict_size], cells)
+        cells = cells.ravel()
+        corrs = np.dot(markers[:dict_size], cells)
         m = np.argmax(corrs)
         corr = corrs[m]
         if corr > corr_max:

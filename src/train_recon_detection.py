@@ -1,9 +1,8 @@
 # %% imports
 
 import sys, os
-import numpy as np, torch, torch.nn as nn, tqdm
-from ml.dataset import load_split_dataset, ReconDataset
-from ml.model_parts import GaussianNoise, Normalize, Reshape
+import torch, torch.nn as nn, tqdm
+import ml.dataset, ml.model_parts
 
 # %% hyperparameters
 
@@ -33,7 +32,7 @@ def reg_alpha(epoch):
 H, W = 18, 32
 comp_ratio = 0.125
 N = H * W
-M = int(np.floor(N*comp_ratio))
+M = int(N * comp_ratio)
 
 # %% dataset and model name
 
@@ -44,9 +43,9 @@ model_name = f'model=[dcan_M={M}]__train=[{dataset_name}]__rep={rep}'
 print(f'model name: {model_name}')
 
 # preprocess
-all_data, train_data, valid_data = load_split_dataset(f'recon_detection/{dataset_name}.pkl')
-train_set = ReconDataset(train_data, normalize=False)
-valid_set = ReconDataset(valid_data, normalize=False)
+all_data, train_data, valid_data = ml.dataset.load_split_dataset(f'recon_detection/{dataset_name}.pkl')
+train_set = ml.dataset.ReconDataset(train_data, normalize=False)
+valid_set = ml.dataset.ReconDataset(valid_data, normalize=False)
 
 # %% model definition
 
@@ -58,12 +57,12 @@ encoder = nn.Sequential(
     nn.Flatten(),
 ).to(device)
 
-gaussian_noise = GaussianNoise(nl=10**(nl_db/20))
+gaussian_noise = ml.model_parts.GaussianNoise(nl=10**(nl_db/20))
 
 decoder = nn.Sequential(
-    Normalize(),
+    ml.model_parts.Normalize(),
     nn.Linear(M, N, bias=False),
-    Reshape(1, H, W),
+    ml.model_parts.Reshape(1, H, W),
     nn.Conv2d(1, 64, 9, padding=4),
     nn.LeakyReLU(),
     nn.Conv2d(64, 32, 1, padding=0),
@@ -85,12 +84,12 @@ def binary_reg(weight):
 def binarize(weight):
     '''
     ### parameters:
-    *   `weight`: detached tensor
+    *   `weight`: float tensor
 
     ### returns:
     *   `weight`: dtype=torch.float32, entries in {-1., 1.}
     '''
-    return (weight > 0).type(torch.float32) * 2 - 1
+    return (weight.detach() > 0).type(torch.float32) * 2 - 1
 
 # %% things to do in an epoch
 
@@ -108,8 +107,8 @@ def run_epoch(epoch, dataloader, is_training):
     # initialize statistics
     loss_epoch = 0. # accumulated loss in this epoch
     reg_epoch = 0. # accumulated binary regularization loss
-    num_instance = 0
-    num_flip = 0
+    n_instance = 0
+    n_flip = 0
 
     # iterate over batches
     for batch in dataloader:
@@ -129,28 +128,28 @@ def run_epoch(epoch, dataloader, is_training):
 
         # clear gradients, backward propagation, and update parameters
         if is_training:
-            weight_old = binarize(encoder[0].weight.detach()).type(torch.int64)
+            weight_old = binarize(encoder[0].weight)
             optimizer.zero_grad()
             ((loss_batch + reg_batch) / batch_size).backward()
             optimizer.step()
-            weight_new = binarize(encoder[0].weight.detach()).type(torch.int64)
-            n_flip = (weight_new - weight_old).abs().sum().item() // 2
+            weight_new = binarize(encoder[0].weight)
+            n_flip_batch = (weight_new - weight_old).abs().sum().item() / 2
         else:
-            n_flip = 0
+            n_flip_batch = 0
 
         # update statistics
         loss_epoch += loss_batch.item()
         reg_epoch += reg_batch.item()
-        num_instance += len(images)
-        num_flip += n_flip
+        n_instance += len(images)
+        n_flip += n_flip_batch
 
     if is_training:
         scheduler.step()
 
-    avg_loss = loss_epoch / num_instance
-    avg_reg = reg_epoch / num_instance
+    avg_loss = loss_epoch / n_instance
+    avg_reg = reg_epoch / n_instance
 
-    return avg_loss, avg_reg, num_flip
+    return avg_loss, avg_reg, n_flip
 
 # %% preparation for training
 
@@ -179,12 +178,12 @@ trange = tqdm.tqdm(range(1, n_epoch + 1))
 for epoch in trange:
 
     # train
-    loss, reg, num_flip = run_epoch(epoch, train_loader, is_training=True)
-    stats_train = f'train: {loss:5.3f}, reg: {reg:5.3f}, flips: {num_flip}'
+    loss, reg, n_flip = run_epoch(epoch, train_loader, is_training=True)
+    stats_train = f'train: {loss:5.3f}, reg: {reg:5.3f}, #flip: {int(n_flip)}'
 
     # validate
     with torch.no_grad():
-        loss, reg, num_flip = run_epoch(epoch, valid_loader, is_training=False)
+        loss, reg, n_flip = run_epoch(epoch, valid_loader, is_training=False)
     stats_valid = f'valid: {loss:5.3f}'
 
     # display status
@@ -192,7 +191,7 @@ for epoch in trange:
 
     # binarize and fix encoder after `n_epoch_before_reg + n_epoch_reg` epochs
     if epoch == n_epoch_before_reg + n_epoch_reg:
-        encoder[0].weight = torch.nn.Parameter(binarize(encoder[0].weight.detach()))
+        encoder[0].weight = torch.nn.Parameter(binarize(encoder[0].weight))
         encoder[0].weight.requires_grad = False
 
 # save model after training

@@ -1,13 +1,18 @@
 import numpy as np
 
 ################################################################################
+# conventions
+################################################################################
+
+# axis 1 (x axis) is rightward
+# axis 2 (y axis) is downward
+# angles are counterclockwise
+
+################################################################################
 # CNM (continuous embedding)
 ################################################################################
 
-cnm_scale = np.array([
-    [1/32, 1/32, 1/32],
-    [1/32, 1/32, 1/32],
-], dtype=np.float32)
+cnm_scale = 32
 
 def angle_double(x, y):
     X = x ** 2
@@ -16,9 +21,9 @@ def angle_double(x, y):
     return (X - Y) / r, 2 * x * y / r
 
 def angle_half(x, y):
-    # [-pi, pi) -> [-pi/2, pi/2)
+    # [-180, 180) -> [-90, 90)
     if x < 0 and y == 0:
-        return 0, x
+        return 0, -x
     r = np.sqrt(x ** 2 + y ** 2)
     return np.sqrt(r * (r+x) / 2), np.sqrt(r * (r-x) / 2) * np.sign(y)
 
@@ -53,21 +58,35 @@ def cnm_embed(aff_mat):
     into [Cx, Cy, Nx, Ny, Mx, My]
 
     The transformation is from the marker coordinates:
-    *   origin at center of the marker
-    *   basis vectors ending at the centers of 2 adjacent edges (center of white rims, not outer borders)
+    *   The origin is at center of the marker.
+    *   Basis vectors are ending at the centers of the right and bottom edges (center of white rims, not outer borders).
 
     to the image coordinates:
-    *   origin at the center of the upper-left pixel
-    *   basis vectors are rightward and downward, lengths are 1 px
+    *   The origin is at the center of the upper-left macropixel.
+    *   Basis vectors are rightward and downward, lengths are 1 macropixel.
+
+    ### parameters:
+    *   `aff_mat`: as defined above
+
+    ### returns:
+    *   `CNM`: [Cx, Cy, Nx, Ny, Mx, My], dtype=np.float32
     '''
-    (Ax, Bx, Cx), (Ay, By, Cy) = aff_mat * cnm_scale
+    (Ax, Bx, Cx), (Ay, By, Cy) = aff_mat / cnm_scale
     Nx, Ny, Mx, My = ab2nm(Ax, Ay, Bx, By)
     return np.array([Cx, Cy, Nx, Ny, Mx, My], dtype=np.float32)
 
 def cnm_extract(CNM):
     ''' extract aff_mat from [Cx, Cy, Nx, Ny, Mx, My]
 
-    The extracted aff_mat is guaranteed to be not flipping (mirroring).
+    The extracted aff_mat is unified, i.e., guaranteed to satisfy:
+    *   (1) angle(A), angle(B) in [-90, 90)
+    *   (2) angle(A) - angle(B) in [0, 180]
+
+    ### parameters:
+    *   `CNM`: [Cx, Cy, Nx, Ny, Mx, My]
+
+    ### returns:
+    *   `aff_mat`: as defined in embed.cnm_embed(), unified, dtype=np.float32, shape=(2, 3)
     '''
     Cx, Cy, Nx, Ny, Mx, My = CNM
     Ax, Ay, Bx, By = nm2ab(Nx, Ny, Mx, My)
@@ -78,27 +97,33 @@ def cnm_extract(CNM):
         [Ax, Bx, Cx],
         [Ay, By, Cy]
     ], dtype=np.float32)
-    aff_mat /= cnm_scale
+    aff_mat *= cnm_scale
     return aff_mat
 
-def cnm_normalize(aff_mat):
+def cnm_unify(aff_mat):
     ''' equivalent to cnm_extract(cnm_embed(aff_mat))
-    '''
-    ((Ax, Bx, Cx), (Ay, By, Cy)) = aff_mat
 
-    # normalize to output range of angle_half(x, y)
+    ### parameters:
+    *   `aff_mat`: as defined in embed.cnm_embed(), shape=(2, 3)
+
+    ### returns:
+    *   `aff_mat`: as defined in embed.cnm_embed(), unified, dtype=`aff_mat`.dtype, shape=(2, 3)
+    '''
+    (Ax, Bx, Cx), (Ay, By, Cy) = aff_mat
+
+    # angle(A) in [-90, 90)
     if Ax < 0:
         Ax, Ay = -Ax, -Ay
-    if Ax == 0 and Ay > 0:
+    if Ax == 0 and Ay < 0:
         Ay = -Ay
 
-    # normalize to output range of angle_half(x, y)
+    # angle(B) in [-90, 90)
     if Bx < 0:
         Bx, By = -Bx, -By
-    if Bx == 0 and By > 0:
+    if Bx == 0 and By < 0:
         By = -By
 
-    # not flipping
+    # angle(A) - angle(B) in [0, 180]
     AcrossB = Ax*By - Ay*Bx
     if AcrossB < 0:
         Ax, Ay, Bx, By = Bx, By, Ax, Ay
@@ -114,13 +139,10 @@ def cnm_normalize(aff_mat):
 # CAB (naive discontinuous embedding)
 ################################################################################
 
-cab_scale = np.array([
-    [1/32, 1/32, 1/32],
-    [1/32, 1/32, 1/32],
-], dtype=np.float32)
+cab_scale = 32
 
 def cab_embed(aff_mat):
-    (Ax, Bx, Cx), (Ay, By, Cy) = aff_mat * cab_scale
+    (Ax, Bx, Cx), (Ay, By, Cy) = aff_mat / cab_scale
     return np.array([Cx, Cy, Ax, Ay, Bx, By], dtype=np.float32)
 
 def cab_extract(CAB):
@@ -129,7 +151,7 @@ def cab_extract(CAB):
         [Ax, Bx, Cx],
         [Ay, By, Cy]
     ], dtype=np.float32)
-    aff_mat /= cab_scale
+    aff_mat *= cab_scale
     return aff_mat
 
 ################################################################################

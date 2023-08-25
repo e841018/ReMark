@@ -1,4 +1,3 @@
-import numpy as np
 dmd_h, dmd_w = 1080, 1920
 
 class ObsMeta:
@@ -8,12 +7,12 @@ class ObsMeta:
 
         ### parameters:
         *   `phi`: observation matrix, dtype=np.int8, shape=(M, N), entries in {-1, 1}
-        *   `phi_str`: str, model name of recon NN or sensing basis
-        *   `exposure`: float, exposure time for 1 bipolar observation (2 unipolar observations) in seconds
+        *   `phi_str`: str, model name of reconstruction NN or sensing basis
+        *   `exposure`: float, exposure time for 1 bipolar mask (2 unipolar masks) in seconds
         *   `pos`: (y, x), upper left corner of the observed rectangle
-        *   `size`: (y, x), height and width of a single block
-        *   `shape`: (y, x), number of blocks in vertical and horizontal direction
-        *   `comp`: should be True, using bipolar masks
+        *   `size`: (y, x), height and width of a single macropixel
+        *   `shape`: (y, x), number of macropixels in vertical and horizontal directions
+        *   `comp`: should be True, using bipolar (old name: complementary) masks
         *   `check`: if True, makes sure `pos`, `size`, `shape` are within DMD dimension
         '''
         self.phi = phi
@@ -22,7 +21,7 @@ class ObsMeta:
         self.size = size
         self.shape = shape
         assert comp, comp
-        self.comp = comp
+        self.comp = comp # kept for backward compatibility
         self.expo = exposure
         if check:
             assert pos[0] >= 0, f'pos={pos}, size={size}, shape={shape}'
@@ -34,11 +33,11 @@ class ObsMeta:
         M, N = self.phi.shape
         return f'''ObsMeta:
       sensing basis: {self.phi_str}
-  compression ratio: {M} / {N} = {M/N*100:5.2f}%
+  compression ratio: {M} / {N} = {M/N*100:.2f}%
            position: {self.pos}
-         block size: {self.size}
-             #block: {self.shape}
-      complementary: {self.comp}
+    macropixel size: {self.size}
+        #macropixel: {self.shape}
+            bipolar: {self.comp}
       exposure [ms]: {self.expo * 1000}
 total exposure [ms]: {self.expo * 1000 * M}
 '''

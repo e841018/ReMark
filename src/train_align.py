@@ -2,7 +2,7 @@
 
 import sys, os
 import numpy as np, torch, torch.nn as nn, tqdm
-from ml.dataset import load_split_dataset, AlignDataset
+import ml.dataset
 
 # %% hyperparameters
 
@@ -22,9 +22,9 @@ model_name = f'model=[cnm]__train=[{dataset_name}]__rep={rep}'
 print(f'model name: {model_name}')
 
 # preprocess
-all_data, train_data, valid_data = load_split_dataset(f'align/{dataset_name}.pkl')
-train_set = AlignDataset(train_data)
-valid_set = AlignDataset(valid_data)
+all_data, train_data, valid_data = ml.dataset.load_split_dataset(f'align/{dataset_name}.pkl')
+train_set = ml.dataset.AlignDataset(train_data)
+valid_set = ml.dataset.AlignDataset(valid_data)
 
 # %% model definition
 
@@ -64,7 +64,7 @@ def run_epoch(epoch, dataloader, is_training):
     # initialize statistics
     loss_epoch = 0. # accumulated loss in this epoch
     errors_epoch = torch.zeros(6, dtype=torch.float32, device=device)
-    num_instance = 0
+    n_instance = 0
 
     # iterate over batches
     for batch in dataloader:
@@ -92,13 +92,13 @@ def run_epoch(epoch, dataloader, is_training):
 
         loss_epoch += loss_batch.item()
         errors_epoch += (outputs - labels).abs().sum(axis=0)
-        num_instance += len(labels)
+        n_instance += len(labels)
 
     if is_training:
         scheduler.step()
 
-    avg_loss = loss_epoch / num_instance
-    avg_errors = (errors_epoch / num_instance).cpu().numpy()
+    avg_loss = loss_epoch / n_instance
+    avg_errors = (errors_epoch / n_instance).cpu().numpy()
 
     return (avg_loss, *avg_errors)
 
@@ -131,12 +131,12 @@ for epoch in trange:
 
     # train
     loss, Cx, Cy, Nx, Ny, Mx, My = run_epoch(epoch, train_loader, is_training=True)
-    stats_train = f'train: {loss:5.3f}, C={l2(Cx, Cy)*dim:5.3f}px, N={l2(Nx, Ny)*dim:5.3f}px, M={l2(Mx, My)*dim:5.3f}px'
+    stats_train = f'train: {loss:5.3f}, C={l2(Cx, Cy)*dim:5.3f}mpx, N={l2(Nx, Ny)*dim:5.3f}mpx, M={l2(Mx, My)*dim:5.3f}mpx'
 
     # validate
     with torch.no_grad():
         loss, Cx, Cy, Nx, Ny, Mx, My = run_epoch(epoch, valid_loader, is_training=False)
-    stats_valid = f'valid: {loss:5.3f}, C={l2(Cx, Cy)*dim:5.3f}px, N={l2(Nx, Ny)*dim:5.3f}px, M={l2(Mx, My)*dim:5.3f}px'
+    stats_valid = f'valid: {loss:5.3f}, C={l2(Cx, Cy)*dim:5.3f}mpx, N={l2(Nx, Ny)*dim:5.3f}mpx, M={l2(Mx, My)*dim:5.3f}mpx'
 
     # display status
     trange.set_postfix_str(f'{stats_train} | {stats_valid}')

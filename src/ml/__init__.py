@@ -30,12 +30,12 @@ class Sampler():
 
         ### parameters:
         *   `phi`: encoder module or ndarray
-        \t  *   encoder module: the weight of the 0th layer has shape (M, 0, H, W), entries in {-1., 1.}
+        \t  *   encoder module: the weight of the 0th layer has shape (M, 1, H, W), entries in {-1., 1.}
         \t  *   ndarray: shape=(M, N), dtype=np.int8, entries in {-1, 1}
 
         ### usage:
             ```
-            sample = Sampler(phi)
+            sample = Sampler(encoder)
             observation = sample(img)
             ```
         '''
@@ -52,7 +52,7 @@ class Sampler():
         *   `observation`: ndarray, shape=(M, )
         '''
         M, N = self.phi.shape
-        img = img.reshape((N, 1))
+        img = img.reshape((N, ))
         return (self.phi @ img).ravel()
 
 class Decoder():
@@ -61,13 +61,13 @@ class Decoder():
 
         ### parameters:
         *   `phi`: encoder module or ndarray
-        \t  *   encoder module: the weight of the 0th layer has shape (M, 0, H, W), entries in {-1., 1.}
+        \t  *   encoder module: the weight of the 0th layer has shape (M, 1, H, W), entries in {-1., 1.}
         \t  *   ndarray: shape=(M, N), dtype=np.int8, entries in {-1, 1}
         *   `decoder`: decoder module, takes inputs of shape (B, M) and returns reconstructions of shape (B, 1, H, W)
 
         ### usage:
             ```
-            decode = Decoder(decoder)
+            decode = Decoder(encoder, decoder)
             reconstruction = decode(observation)
             reconstructions = decode.batch(observations)
             ```
@@ -95,9 +95,9 @@ class Decoder():
             recon = self.decoder(observation)[0, 0, :, :].detach()
 
         # set negative to 0
-        recon = torch.max(recon, torch.tensor([0.], device=device))
+        recon[recon < 0] = 0
 
-        # scale recon s.t. (Phi@recon).norm() == obs.norm()
+        # scale recon s.t. (phi@recon).norm() == obs.norm()
         scale = observation.norm() / torch.mm(self.phi, recon.reshape(N, 1)).norm()
         recon *= scale
 
@@ -108,7 +108,7 @@ class Decoder():
     def batch(self, observations):
         '''
         ### parameters:
-        *   `observations`: list of ndarray, shape=(M, ), dtype=np.float32
+        *   `observations`: list of ndarray, shape=(M, )
 
         ### returns:
         *   `reconstructions`: list of ndarray, shape=(H, W), dtype=np.float32
@@ -128,9 +128,9 @@ class Decoder():
                 recons = self.decoder(batch)[:, 0, :, :].detach()
 
                 # set negative to 0
-                recons = torch.max(recons, torch.tensor([0.], device=device))
+                recons[recons < 0] = 0
 
-                # scale s.t. (Phi@recon).norm() == obs.norm()
+                # scale recons s.t. (phi@recon).norm() == obs.norm()
                 scales = batch.norm(dim=1) / torch.matmul(self.phi, recons.reshape(-1, N, 1)).norm(dim=(1, 2))
                 recons *= scales.view(-1, 1, 1)
 
@@ -151,7 +151,7 @@ def load_fit(model_name):
 
 class Fit():
     def __init__(self, model):
-        ''' fit a single image
+        ''' fit a single image or a list of images
 
         ### parameters:
         *   `model`: alignment module, takes inputs of shape (B, 1, H, W) and returns alignment of shape (B, 6)
@@ -171,7 +171,7 @@ class Fit():
         *   `recon`: ndarray, shape=(H, W)
 
         ### returns:
-        *   `aff_mat`: as defined in embed.cnm_embed()
+        *   `aff_mat`: as defined in embed.cnm_embed(), unified
         '''
         # prepare data
         H, W = recon.shape
@@ -182,8 +182,9 @@ class Fit():
         self.model.eval()
         with torch.no_grad():
             output = self.model(recon)[0].detach().cpu().numpy().astype(np.float32)
+        aff_mat = embed.extract(output)
 
-        return embed.extract(output)
+        return aff_mat
 
     def batch(self, recons):
         '''
@@ -191,12 +192,12 @@ class Fit():
         *   `recons`: list of ndarray, shape=(H, W)
 
         ### returns:
-        *   `aff_mats`: list of aff_mat, as defined in embed.cnm_embed()
+        *   `aff_mats`: list of aff_mat, as defined in embed.cnm_embed(), unified
         '''
         # prepare data
         recons = [recon / np.linalg.norm(recon) for recon in recons]
         dataloader = torch.utils.data.DataLoader(
-            dataset=recons,
+            dataset=np.array(recons).astype(np.float32),
             batch_size=256)
 
         # infer

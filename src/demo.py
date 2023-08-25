@@ -2,9 +2,9 @@ import pickle
 import matplotlib.pyplot as plt
 import ml, marker
 
-# The `.obs` file is a pickled dict object, containing a numpy vector of
-# observations and an ObsMeta (defined in meta.py) object recording how the
-# observations were made.
+# The `.obs` file is a pickled dict object, containing
+# (1) data['obs']: a numpy vector of observations
+# (2) data['meta']: an ObsMeta (defined in meta.py) object recording how the observations were made.
 
 print('''
 ================================================================================
@@ -32,8 +32,7 @@ identification stage - reconstruct
 ''')
 for M in 64, 128, 256:
     print(f'\n[M = {M}]\n')
-    with open(f'../data/20220515identification/marker=0_tilt=0/id_M={M}/0.obs',
-            'rb') as f:
+    with open(f'../data/20220515identification/marker=0_tilt=0/id_M={M}/0.obs', 'rb') as f:
         data = pickle.load(f)
         meta = data['meta']
         obs = data['obs']
