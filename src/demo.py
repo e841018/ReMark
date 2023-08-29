@@ -18,8 +18,8 @@ with open('../data/20220529detection/0.obs', 'rb') as f:
     print(meta)
     print(f'obs: dtype={obs.dtype}, shape={obs.shape}')
 model_name = meta.phi_str
-phi, decode = ml.load_phi_decode(model_name)
-recon = decode(obs)
+phi, reconstruct = ml.load_phi_reconstruct(model_name)
+recon = reconstruct(obs)
 plt.figure()
 plt.imshow(recon, cmap='gray')
 plt.title('detection stage - reconstruct')
@@ -39,8 +39,8 @@ for M in 64, 128, 256:
         print(meta)
         print(f'obs: dtype={obs.dtype}, shape={obs.shape}')
     model_name = meta.phi_str
-    phi, decode = ml.load_phi_decode(model_name)
-    recon = decode(obs)
+    phi, reconstruct = ml.load_phi_reconstruct(model_name)
+    recon = reconstruct(obs)
     plt.figure()
     plt.imshow(recon, cmap='gray')
     plt.title(f'identification stage - reconstruct (M={M})')

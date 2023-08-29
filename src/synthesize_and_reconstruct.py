@@ -8,8 +8,8 @@ train_prop = 0.8
 
 # recon model
 encoder, decoder = ml.load_enc_dec(f'model=[dcan_M={M}]__train=[clear_identification_sample=100000]__rep={0}')
-sample = ml.Sampler(encoder)
-decode = ml.Decoder(encoder, decoder)
+observe = ml.Observe(encoder)
+reconstruct = ml.Reconstruct(encoder, decoder)
 
 # contents of validation set
 with open('../data/markers_aruco_DICT_4X4_1000.pkl', 'rb') as f:
@@ -38,11 +38,11 @@ for i in tqdm.tqdm(range(n_draw)):
         aff_mats[i],
         bias=render_bias(res, *bias_specs[i]))
     # noisy sampling
-    obs = sample(img) # RMS of signal is about 15 dB
+    obs = observe(img) # RMS of signal is about 15 dB
     obs += np.random.normal(scale=10**(nl_db/20), size=obs.shape)
     observations.append(obs)
 # reconstruction
-recons = decode.batch(observations)
+recons = reconstruct.batch(observations)
 all_data = list(zip(recons, aff_mats, bias_specs, contents))
 
 dataset_name = f'dcan{M}_snr={15-nl_db}db_sample={n_draw}'

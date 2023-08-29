@@ -18,15 +18,15 @@ def encoder2phi(encoder):
     phi = phi.reshape((M, N))
     return phi
 
-def load_phi_decode(model_name):
+def load_phi_reconstruct(model_name):
     encoder, decoder = load_enc_dec(model_name)
     phi = encoder2phi(encoder) # {-1, 1}
-    decode = Decoder(encoder, decoder)
-    return phi, decode
+    reconstruct = Reconstruct(encoder, decoder)
+    return phi, reconstruct
 
-class Sampler():
+class Observe():
     def __init__(self, phi):
-        ''' simulate DMD sampling
+        ''' make observation to a single image, simulating SPI hardware
 
         ### parameters:
         *   `phi`: encoder module or ndarray
@@ -35,8 +35,8 @@ class Sampler():
 
         ### usage:
             ```
-            sample = Sampler(encoder)
-            observation = sample(img)
+            observe = Observe(encoder)
+            observation = observe(img)
             ```
         '''
         if isinstance(phi, torch.nn.Module):
@@ -55,9 +55,9 @@ class Sampler():
         img = img.reshape((N, ))
         return (self.phi @ img).ravel()
 
-class Decoder():
+class Reconstruct():
     def __init__(self, phi, decoder):
-        ''' decode a single image or a list of images
+        ''' reconstruct a single image or a list of images
 
         ### parameters:
         *   `phi`: encoder module or ndarray
@@ -67,9 +67,9 @@ class Decoder():
 
         ### usage:
             ```
-            decode = Decoder(encoder, decoder)
-            reconstruction = decode(observation)
-            reconstructions = decode.batch(observations)
+            reconstruct = Reconstruct(encoder, decoder)
+            reconstruction = reconstruct(observation)
+            reconstructions = reconstruct.batch(observations)
             ```
         '''
         if isinstance(phi, torch.nn.Module):
