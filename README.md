@@ -1,5 +1,5 @@
 # ReMark
-This repository provides the source code used in *ReMark: Privacy-preserving Fiducial Marker System via Single-pixel Imaging* accepted in [MobiCom 2023](https://sigmobile.org/mobicom/2023/index.html). Please cite our paper if it helps your research.
+This repository provides the source code used in [ReMark: Privacy-preserving Fiducial Marker System via Single-pixel Imaging](https://doi.org/10.1145/3570361.3613289) accepted in MobiCom 2023. Please cite our paper if it helps your research.
 
 ### Requirements
 
@@ -68,3 +68,25 @@ This repository provides the source code used in *ReMark: Privacy-preserving Fid
 ### Notes on SPI hardware
 
 This repository does not include the code that drives the SPI hardware in the paper. It is highly recommended to replace the outdated DMD and USRP with modern hardware, in which case the old code will not be suitable. Some observations collected by the outdated hardware are available in the `data` directory. The formats are documented in `demo.py`.
+
+### Citation
+
+```bibtex
+@inproceedings{10.1145/3570361.3613289,
+    author = {Yu, Tzu-Hsu and Tsai, Hsin-Mu},
+    title = {ReMark: Privacy-Preserving Fiducial Marker System via Single-Pixel Imaging},
+    year = {2023},
+    isbn = {9781450399906},
+    publisher = {Association for Computing Machinery},
+    address = {New York, NY, USA},
+    url = {https://doi.org/10.1145/3570361.3613289},
+    doi = {10.1145/3570361.3613289},
+    booktitle = {Proceedings of the 29th Annual International Conference on Mobile Computing and Networking},
+    articleno = {74},
+    numpages = {15},
+    keywords = {soft-decision decoding, single-pixel imaging, fiducial marker, retroreflective imaging, singularity-free embedding},
+    location = {Madrid, Spain},
+    series = {ACM MobiCom '23}
+}
+```
+
